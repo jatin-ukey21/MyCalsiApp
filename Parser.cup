@@ -1,0 +1,59 @@
+import java_cup.runtime.*;
+
+parser code {: 
+    public static void main(String[] args) throws Exception {
+        Lexer lexer = new Lexer(new java.io.InputStreamReader(System.in));
+        Parser parser = new Parser(lexer);
+        parser.parse();
+		System.out.println("Result: " + parser.getResult());  
+    }
+    
+    private Double result;
+    
+    public Double getResult() {
+        return result;
+    }
+    
+    public void report_error(String message, Object info) {
+        System.err.println("Error: " + message);
+    }
+    
+    public void syntax_error(Symbol cur_token) {
+        report_error("Syntax error at line " + (cur_token.left+1) + 
+                    ", column " + (cur_token.right+1) + 
+                    ", token: " + cur_token, cur_token);
+    }
+:}
+
+/* Terminals */
+terminal Double NUMBER;
+terminal PLUS, MINUS, TIMES, DIVIDE;
+terminal LPAREN, RPAREN;
+
+/* Non terminals */
+non terminal Double expr_list;
+non terminal Double expr;
+
+/* Precedences */
+precedence left PLUS, MINUS;
+precedence left TIMES, DIVIDE;
+
+/* Grammar rules */
+expr_list ::= expr_list:el expr:e {: result = e; :}
+            | expr:e              {: result = e; :}
+            ;
+
+expr ::= expr:e1 PLUS expr:e2     {: RESULT = ((Double)e1) + ((Double)e2); :}
+        | expr:e1 MINUS expr:e2   {: RESULT = ((Double)e1) - ((Double)e2); :}
+        | expr:e1 TIMES expr:e2   {: RESULT = ((Double)e1) * ((Double)e2); :}
+        | expr:e1 DIVIDE expr:e2 {: 
+                                    if (((Double)e2) == 0) {
+                                        System.err.println("Error: Division by zero");
+                                        RESULT = Double.NaN;
+                                    } else {
+                                        RESULT = ((Double)e1) / ((Double)e2); 
+                                    }
+                                  :}
+        | LPAREN expr:e RPAREN    {: RESULT = (Double)e; :}
+        | NUMBER:n                {: RESULT = (Double)n; :}
+        ;
